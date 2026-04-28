@@ -55,17 +55,31 @@ public class CloudinaryService {
         File tempFile = File.createTempFile("upload_", "_" + file.getOriginalFilename());
         file.transferTo(tempFile);
 
+        String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+
+        // 🌟 BỘ PHÂN LUỒNG THÔNG MINH
+        String resourceType = "auto";
+        if (fileName.matches(".*\\.(jpg|jpeg|png|gif|webp|pdf)$")) {
+            // Nhóm 1: Ảnh và PDF -> Bắt buộc vào thư mục 'image' để tạo ảnh bìa xem trước
+            resourceType = "image";
+        } else if (fileName.matches(".*\\.(ppt|pptx|doc|docx|xls|xlsx|zip)$")) {
+            // Nhóm 2: File Office và các file khác -> Bắt buộc vào thư mục 'raw' (tệp thô)
+            resourceType = "raw";
+        }
+
         try {
-            // SỬA THÀNH "image" (thay vì "auto" hay "raw")
-            // Cloudinary hỗ trợ xử lý PDF trong thư mục image, giúp tạo ảnh bìa và xem trực tiếp!
             Map uploadResult = cloudinary.uploader().upload(tempFile,
                     ObjectUtils.asMap(
-                            "resource_type", "image",
+                            "resource_type", resourceType,
                             "use_filename", true
                     ));
             return uploadResult.get("secure_url").toString();
+        } catch (Exception e) {
+            // In lỗi ra log của Railway để dễ bắt bệnh nếu có lỗi tiếp
+            System.out.println("❌ LỖI CLOUDINARY: " + e.getMessage());
+            throw new RuntimeException("Upload thất bại: " + e.getMessage());
         } finally {
-            tempFile.delete();
+            tempFile.delete(); // Dọn dẹp file tạm
         }
     }
 
