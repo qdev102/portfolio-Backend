@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Map;
 
@@ -14,7 +16,6 @@ public class CloudinaryService {
 
     private final Cloudinary cloudinary;
 
-    // Lấy thông tin từ application.properties để khởi tạo kết nối
     public CloudinaryService(
             @Value("${cloudinary.cloud-name}") String cloudName,
             @Value("${cloudinary.api-key}") String apiKey,
@@ -26,18 +27,35 @@ public class CloudinaryService {
                 "api_secret", apiSecret));
     }
 
-    // Hàm nhận file từ máy tính và đẩy lên Cloud, trả về link URL
     public String uploadImage(MultipartFile file) throws IOException {
-        // Thêm "resource_type", "auto" để Cloudinary tự nhận diện Ảnh hoặc Video
-        Map uploadResult = cloudinary.uploader().upload(file.getBytes(),
-                ObjectUtils.asMap("resource_type", "auto"));
-        return uploadResult.get("url").toString();
+        // 1. CHIÊU THỨC QUAN TRỌNG: Tạo file vật lý tạm thời để giữ nguyên ĐUÔI FILE (.pdf, .pptx)
+        File tempFile = File.createTempFile("upload_", "_" + file.getOriginalFilename());
+        try (FileOutputStream fos = new FileOutputStream(tempFile)) {
+            fos.write(file.getBytes());
+        }
+
+        try {
+            // 2. Upload file lên. Cloudinary sẽ tự soi đuôi file để biết đây là Ảnh hay PDF/PPT
+            Map uploadResult = cloudinary.uploader().upload(tempFile,
+                    ObjectUtils.asMap(
+                            "resource_type", "auto",
+                            "use_filename", true
+                    ));
+
+            // 3. BẮT BUỘC dùng "secure_url" (HTTPS). Dùng "url" (HTTP) Vercel sẽ chặn tải file!
+            return uploadResult.get("secure_url").toString();
+        } finally {
+            // 4. Xóa file tạm trên server sau khi up xong
+            tempFile.delete();
+        }
     }
 
-    // Hàm xóa file trên Cloudinary
     public void deleteImage(String publicId) throws IOException {
-        cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+        // CHIÊU THỨC XÓA TRIỆT ĐỂ:
+        // File PPT được Cloudinary lưu dạng "raw", còn Ảnh/PDF lưu dạng "image".
+        // Ta vung kiếm xóa cả 2 nơi để đảm bảo 100% không trượt tệp nào!
+        cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", "image"));
+        cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", "raw"));
+        cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", "video"));
     }
-
 }
-
