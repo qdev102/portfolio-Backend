@@ -27,21 +27,40 @@ public class CloudinaryService {
                 "api_secret", apiSecret));
     }
 
+//    public String uploadImage(MultipartFile file) throws IOException {
+//        File tempFile = File.createTempFile("upload_", "_" + file.getOriginalFilename());
+//        file.transferTo(tempFile); // Dùng lệnh này an toàn hơn, chống hỏng file
+//
+//        // Phân loại: Ảnh thì "auto", Tài liệu (PDF, PPT, DOC) thì BẮT BUỘC "raw" (nguyên bản)
+//        String originalFilename = file.getOriginalFilename();
+//        String resourceType = "auto";
+//        if (originalFilename != null && originalFilename.toLowerCase().matches(".*\\.(pdf|ppt|pptx|doc|docx)$")) {
+//            resourceType = "raw";
+//        }
+//
+//        try {
+//            Map uploadResult = cloudinary.uploader().upload(tempFile,
+//                    ObjectUtils.asMap(
+//                            "resource_type", resourceType,
+//                            "use_filename", true
+//                    ));
+//            return uploadResult.get("secure_url").toString();
+//        } finally {
+//            tempFile.delete();
+//        }
+//    }
+
+
     public String uploadImage(MultipartFile file) throws IOException {
         File tempFile = File.createTempFile("upload_", "_" + file.getOriginalFilename());
-        file.transferTo(tempFile); // Dùng lệnh này an toàn hơn, chống hỏng file
-
-        // Phân loại: Ảnh thì "auto", Tài liệu (PDF, PPT, DOC) thì BẮT BUỘC "raw" (nguyên bản)
-        String originalFilename = file.getOriginalFilename();
-        String resourceType = "auto";
-        if (originalFilename != null && originalFilename.toLowerCase().matches(".*\\.(pdf|ppt|pptx|doc|docx)$")) {
-            resourceType = "raw";
-        }
+        file.transferTo(tempFile);
 
         try {
+            // SỬA THÀNH "image" (thay vì "auto" hay "raw")
+            // Cloudinary hỗ trợ xử lý PDF trong thư mục image, giúp tạo ảnh bìa và xem trực tiếp!
             Map uploadResult = cloudinary.uploader().upload(tempFile,
                     ObjectUtils.asMap(
-                            "resource_type", resourceType,
+                            "resource_type", "image",
                             "use_filename", true
                     ));
             return uploadResult.get("secure_url").toString();
@@ -49,6 +68,7 @@ public class CloudinaryService {
             tempFile.delete();
         }
     }
+
 
     public void deleteImage(String publicId) throws IOException {
         // CHIÊU THỨC XÓA TRIỆT ĐỂ:
