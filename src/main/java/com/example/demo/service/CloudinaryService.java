@@ -28,24 +28,24 @@ public class CloudinaryService {
     }
 
     public String uploadImage(MultipartFile file) throws IOException {
-        // 1. CHIÊU THỨC QUAN TRỌNG: Tạo file vật lý tạm thời để giữ nguyên ĐUÔI FILE (.pdf, .pptx)
         File tempFile = File.createTempFile("upload_", "_" + file.getOriginalFilename());
-        try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-            fos.write(file.getBytes());
+        file.transferTo(tempFile); // Dùng lệnh này an toàn hơn, chống hỏng file
+
+        // Phân loại: Ảnh thì "auto", Tài liệu (PDF, PPT, DOC) thì BẮT BUỘC "raw" (nguyên bản)
+        String originalFilename = file.getOriginalFilename();
+        String resourceType = "auto";
+        if (originalFilename != null && originalFilename.toLowerCase().matches(".*\\.(pdf|ppt|pptx|doc|docx)$")) {
+            resourceType = "raw";
         }
 
         try {
-            // 2. Upload file lên. Cloudinary sẽ tự soi đuôi file để biết đây là Ảnh hay PDF/PPT
             Map uploadResult = cloudinary.uploader().upload(tempFile,
                     ObjectUtils.asMap(
-                            "resource_type", "auto",
+                            "resource_type", resourceType,
                             "use_filename", true
                     ));
-
-            // 3. BẮT BUỘC dùng "secure_url" (HTTPS). Dùng "url" (HTTP) Vercel sẽ chặn tải file!
             return uploadResult.get("secure_url").toString();
         } finally {
-            // 4. Xóa file tạm trên server sau khi up xong
             tempFile.delete();
         }
     }
