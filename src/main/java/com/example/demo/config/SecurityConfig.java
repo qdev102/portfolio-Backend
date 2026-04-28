@@ -37,11 +37,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000")); // Link của Frontend Next.js
+        // Cấp quyền cho Vercel và Localhost được phép truy cập
+        configuration.setAllowedOrigins(Arrays.asList(
+                "https://portfolio-frontend-smoky-sigma.vercel.app",
+                "http://localhost:3000"
+        ));
+        // Cho phép các hành động Get, Post, Put, Delete
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // Cực kỳ quan trọng: Cho phép header Authorization đi qua
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "x-requested-with"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -52,9 +55,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
-                // Kích hoạt bộ lọc CORS vừa viết ở trên
-                .cors(Customizer.withDefaults())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // BẮT BUỘC PHẢI THÊM DÒNG NÀY VÀO ĐẦU TIÊN
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/slides").permitAll()
@@ -66,4 +68,7 @@ public class SecurityConfig {
 
         return http.build();
     }
+
+
+
 }
