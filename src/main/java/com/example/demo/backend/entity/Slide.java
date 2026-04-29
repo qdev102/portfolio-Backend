@@ -12,4 +12,7 @@ public class Slide {
     private String description;
     private String imageUrl;
     private String category;
+
+    //update gía
+    private Long price;
 }

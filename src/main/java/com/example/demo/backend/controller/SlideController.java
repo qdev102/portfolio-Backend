@@ -31,12 +31,15 @@ public class SlideController {
     }
 
     // API Thêm Slide
+    // API Thêm Slide
     @PostMapping
     public Slide createSlide(
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
             @RequestParam("description") String description,
-            @RequestParam("category") String category) throws IOException {
+            @RequestParam("category") String category,
+            // THÊM DÒNG NÀY: Hứng giá tiền từ web gửi xuống (Mặc định là 0 nếu không nhập)
+            @RequestParam(value = "price", required = false, defaultValue = "0") Long price) throws IOException {
 
         // 1. Upload file lên Cloudinary và lấy link URL
         String imageUrl = cloudinaryService.uploadImage(file);
@@ -48,8 +51,31 @@ public class SlideController {
         newSlide.setCategory(category);
         newSlide.setImageUrl(imageUrl);
 
+        // THÊM DÒNG NÀY: Lưu giá tiền vào đối tượng
+        newSlide.setPrice(price);
+
         // 3. Lưu vào MySQL
         return slideRepository.save(newSlide);
+    }
+
+
+    // API Sửa thông tin Slide (Tên, Giá, Mô tả, Phân loại)
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateSlide(
+            @PathVariable Long id,
+            @RequestParam("title") String title,
+            @RequestParam("category") String category,
+            @RequestParam("description") String description,
+            @RequestParam(value = "price", required = false, defaultValue = "0") Long price) {
+
+        return slideRepository.findById(id).map(slide -> {
+            slide.setTitle(title);
+            slide.setCategory(category);
+            slide.setDescription(description);
+            slide.setPrice(price);
+            slideRepository.save(slide);
+            return ResponseEntity.ok(slide);
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     // API Xóa Slide

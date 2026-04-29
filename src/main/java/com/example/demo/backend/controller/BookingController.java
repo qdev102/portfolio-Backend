@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -44,5 +45,12 @@ public class BookingController {
         }).start();
 
         return ResponseEntity.ok(savedBooking);
+    }
+
+    @PatchMapping("/{id}/status")
+    public Booking updateStatus(@PathVariable Long id, @RequestBody Map<String, String> statusMap) {
+        Booking booking = bookingRepository.findById(id).orElseThrow();
+        booking.setStatus(statusMap.get("status"));
+        return bookingRepository.save(booking);
     }
 }
